@@ -58,6 +58,7 @@ st.markdown(
         --muted: #657080;
         --card: #ffffff;
         --amber: #f6a000;
+        --pink: #e85aad;
     }
 
     .stApp {
@@ -316,9 +317,9 @@ st.markdown(
     /* Card action button */
     .listing-card + div .stButton > button {
         margin-top: -0.2rem;
-        border: 1px solid #d9dfe4 !important;
-        background: #ffffff !important;
-        color: #334155 !important;
+        border: 1px solid var(--pink) !important;
+        background: var(--pink) !important;
+        color: var(--pink) !important;
         font-weight: 600 !important;
         border-radius: 10px !important;
         min-height: 38px !important;
@@ -326,16 +327,16 @@ st.markdown(
     }
 
     .listing-card + div .stButton > button:hover {
-        background: #0f8f83 !important;
-        border-color: #0f8f83 !important;
-        color: #ffffff !important;
+        background: var(--pink) !important;
+        border-color: var(--pink) !important;
+        color: var(--pink) !important;
     }
 
     .listing-card + div .stButton > button:focus,
     .listing-card + div .stButton > button:focus-visible {
-        color: #334155 !important;
-        border-color: #0f8f83 !important;
-        box-shadow: 0 0 0 2px rgba(15, 143, 131, 0.15) !important;
+        color: var(--pink) !important;
+        border-color: var(--pink) !important;
+        box-shadow: 0 0 0 2px rgba(232, 90, 173, 0.20) !important;
     }
 
     /* ---------- Marketplace/detail pages ---------- */
@@ -429,9 +430,7 @@ with st.sidebar:
     if st.button(
         "Dashboard",
         use_container_width=True,
-        type="primary"
-        if st.session_state.page == "dashboard" and st.session_state.dashboard_tab == "My Listings"
-        else "secondary",
+        type="primary" if st.session_state.page == "dashboard" else "secondary",
     ):
         st.session_state.dashboard_tab = "My Listings"
         go_to("dashboard")
@@ -441,12 +440,12 @@ with st.sidebar:
         go_to("marketplace")
         st.rerun()
 
-    if st.button("Gigs", use_container_width=True, type="primary" if st.session_state.page == "dashboard" and st.session_state.dashboard_tab == "Gigs" else "secondary"):
+    if st.button("Gigs", use_container_width=True, type="secondary"):
         st.session_state.dashboard_tab = "Gigs"
         go_to("dashboard")
         st.rerun()
 
-    if st.button("Rentals", use_container_width=True, type="primary" if st.session_state.page == "dashboard" and st.session_state.dashboard_tab == "Rentals" else "secondary"):
+    if st.button("Rentals", use_container_width=True, type="secondary"):
         st.session_state.dashboard_tab = "Rentals"
         go_to("dashboard")
         st.rerun()
