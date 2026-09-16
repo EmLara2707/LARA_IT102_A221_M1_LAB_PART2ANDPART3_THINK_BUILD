@@ -1,95 +1,119 @@
-
-"""
-listing.py
-----------
-Domain model for StudentHive.
+from dataclasses import dataclass, field
+from typing import List, Optional, Callable
  
-OOP concepts used:
-- Abstraction: Listing is an abstract base class that can't be instantiated directly.
-- Inheritance: Gig and Rental extend Listing and reuse its shared behavior.
-- Encapsulation: internal state (like the id counter) is kept "private" (prefixed
-  with an underscore) and exposed through properties/methods instead of raw access.
-- Polymorphism: each subclass implements type_label() and badge_color() differently,
-  so the UI can call the same method on any Listing and get the right result.
-"""
- 
-from abc import ABC, abstractmethod
+import streamlit as st
  
  
-class Listing(ABC):
-    """Abstract base class for anything that can be posted on StudentHive."""
+@dataclass
+class Listing:
+    """A single Gig or Rental posted on StudentHive."""
  
-    _id_counter = 1  # shared across all listings, "protected" by convention
+    id: int
+    title: str
+    category: str          # "Gig" or "Rental"
+    price: float
+    unit: str               # "hr" or "day"
+    owner: str
+    course: str
+    description: List[str] = field(default_factory=list)
+    subjects: List[str] = field(default_factory=list)
+    requirements: List[str] = field(default_factory=list)
  
-    def __init__(self, title, description, price, price_unit, owner, image_emoji="🏞️", details=None):
-        self._id = Listing._id_counter
-        Listing._id_counter += 1
- 
-        self.title = title
-        self.description = description
-        self.price = price
-        self.price_unit = price_unit
-        self.owner = owner
-        self.image_emoji = image_emoji
-        self.details = details or {}
- 
-    # ---- Encapsulated read-only access to the id ----
     @property
-    def id(self):
-        return self._id
+    def price_label(self) -> str:
+        """Formatted price, e.g. '₱300/hr'."""
+        return f"\u20b1{self.price:.0f}/{self.unit}"
  
-    # ---- Shared helper available to every subclass ----
-    @property
-    def price_display(self):
-        return f"₱{self.price:,}/{self.price_unit}"
+    def render_placeholder_image(self, height: int = 160) -> None:
+        """A simple stand-in for a real listing photo (no custom colors)."""
+        with st.container(border=True):
+            st.markdown(
+                f"<div style='height:{height}px; display:flex; "
+                f"align-items:center; justify-content:center; font-size:2.5rem;'>"
+                f"\U0001F3DE\uFE0F</div>",
+                unsafe_allow_html=True,
+            )
  
-    # ---- Must be implemented by every subclass (polymorphism) ----
-    @abstractmethod
-    def type_label(self):
-        """Short label shown on badges, e.g. 'Gig' or 'Rental'."""
-        raise NotImplementedError
+    def render_card(self, on_view: Optional[Callable[[int], None]] = None,
+                     key_prefix: str = "listing") -> None:
+        """Full card used in the Marketplace grid, with a 'View' action."""
+        with st.container(border=True):
+            st.caption(self.category)
+            self.render_placeholder_image()
+            st.markdown(f"**{self.title}**")
+            st.caption(self.price_label)
+            st.write(f"{self.owner} \u00b7 {self.course}")
+            if on_view is not None:
+                clicked = st.button(
+                    "View",
+                    key=f"{key_prefix}_view_{self.id}",
+                    use_container_width=True,
+                )
+                if clicked:
+                    on_view(self.id)
  
-    @abstractmethod
-    def badge_color(self):
-        """Hex color used for this listing type's badge."""
-        raise NotImplementedError
+    def render_mini_card(self) -> None:
+        """Compact card used in the Dashboard's 'My Listings' tab."""
+        with st.container(border=True):
+            self.render_placeholder_image(height=120)
+            st.write(f"**{self.title}**")
+            st.caption(f"{self.category} \u00b7 {self.price_label}")
  
-    def short_summary(self):
-        return f"{self.title} · {self.price_display}"
+    def render_detail(self) -> None:
+        """Full detail body used on the Listing Detail page (main column)."""
+        self.render_placeholder_image(height=280)
+        st.title(self.title)
+        st.divider()
+        st.subheader(f"About this {self.category}")
+        for paragraph in self.description:
+            st.write(paragraph)
  
-    def __repr__(self):
-        return f"<{self.__class__.__name__} id={self.id} title={self.title!r}>"
+        subjects_col, requirements_col = st.columns(2)
+        with subjects_col:
+            with st.container(border=True):
+                st.markdown("**Subjects Covered**")
+                for subject in self.subjects:
+                    st.write(f"- {subject}")
+        with requirements_col:
+            with st.container(border=True):
+                st.markdown("**Requirements**")
+                for requirement in self.requirements:
+                    st.write(f"- {requirement}")
+ 
+    def render_side_panel(self) -> None:
+        """Price / owner / actions panel used on the Listing Detail page."""
+        with st.container(border=True):
+            st.subheader(self.price_label)
+            st.write(f"**{self.owner}**")
+            st.caption(f"Course, {self.course}")
+            st.button("Message Owner", use_container_width=True, disabled=True,
+                       key=f"message_owner_{self.id}")
+            st.button("Request Booking", use_container_width=True, disabled=True,
+                       key=f"request_booking_{self.id}")
  
  
-class Gig(Listing):
-    """A service a student offers, billed hourly (tutoring, design work, etc.)."""
+@dataclass
+class Booking:
+    """A booking record shown on the Dashboard's Gigs/Rentals tabs."""
  
-    def __init__(self, title, description, price, owner, subjects=None, requirements=None, image_emoji="📚"):
-        details = {
-            "Subjects Covered": subjects or [],
-            "Requirements": requirements or [],
-        }
-        super().__init__(title, description, price, "hr", owner, image_emoji, details)
+    listing_title: str
+    date: str
+    slots: List[str] = field(default_factory=list)
  
-    def type_label(self):
-        return "Gig"
- 
-    def badge_color(self):
-        return "#0f766e"  # teal
- 
- 
-class Rental(Listing):
-    """A physical item or space a student rents out, billed daily."""
- 
-    def __init__(self, title, description, price, owner, item_details=None, requirements=None, image_emoji="🏠"):
-        details = {
-            "Item Details": item_details or [],
-            "Requirements": requirements or [],
-        }
-        super().__init__(title, description, price, "day", owner, image_emoji, details)
- 
-    def type_label(self):
-        return "Rental"
- 
-    def badge_color(self):
-        return "#f59e0b"  # amber
+    def render(self, key_suffix: str = "") -> None:
+        """Render this booking as a row card."""
+        with st.container(border=True):
+            image_col, info_col, date_col = st.columns([1, 3, 1])
+            with image_col:
+                st.markdown("\U0001F3DE\uFE0F")
+            with info_col:
+                st.write(f"**{self.listing_title}**")
+                for slot in self.slots:
+                    st.caption(slot)
+            with date_col:
+                st.button(
+                    self.date,
+                    key=f"booking_{key_suffix}",
+                    disabled=True,
+                    use_container_width=True,
+                )
